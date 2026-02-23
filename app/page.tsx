@@ -209,9 +209,9 @@ export default function Home() {
 
       <div className="wrapper">
         <section className="hero">
-          <div className="hero-label"><div className="hero-label-dot" />Powered by Claude AI</div>
+          <div className="hero-label"><div className="hero-label-dot" />Powered by AI</div>
           <h1>Land the job<br /><span className="h1-line2">you actually want.</span></h1>
-          <p className="hero-sub">Upload your resume, paste a job description — get an AI match score, skill gap analysis, and rewrite suggestions in seconds.</p>
+          <p className="hero-sub">Upload your resume, paste a job description — get a match score, skill gap analysis, and rewrite suggestions in seconds.</p>
           <div className="stats">
             <div className="stat"><div className="stat-num">84%</div><div className="stat-label">Avg. score lift</div></div>
             <div className="stat-divider" />
@@ -271,7 +271,7 @@ export default function Home() {
           </div>
 
           <div className="card-footer">
-            <div className="footer-hint">Uses <span>Privacy</span> — your data is never stored</div>
+            <div className="footer-hint">Uses <span>AI</span> — your data is never stored</div>
             <button className="btn-primary" onClick={handleAnalyze} disabled={!canSubmit}>
               {status === "parsing" ? (
                 <><div className="spinner" />Parsing PDF...</>
@@ -298,6 +298,9 @@ export default function Home() {
             <div className="extracted-text">
               {parseResult.text?.slice(0, 800) ?? ""}
               {(parseResult.text?.length ?? 0) > 800 ? "…" : ""}
+            </div>
+            <div className="next-step">
+              🎉 Resume parsed — <span>ready for analysis</span>
             </div>
           </div>
         )}
@@ -328,11 +331,11 @@ export default function Home() {
           <div className="feature-card">
             <div className="feature-icon" style={{ background: "rgba(74,222,128,0.15)", border: "1px solid rgba(74,222,128,0.25)" }}>✍️</div>
             <div className="feature-title">Rewrite Suggestions</div>
-            <div className="feature-desc">Get bullet-by-bullet AI rewrites that tailor your experience to the specific role.</div>
+            <div className="feature-desc">Get bullet-by-bullet rewrites that tailor your experience to the specific role.</div>
           </div>
         </div>
 
-        <div className="page-footer">Farhan Shaikh · <a href="#">View on GitHub</a></div>
+        <div className="page-footer">Farhan Shaikh <a href="#">View on GitHub</a></div>
       </div>
     </>
   );
