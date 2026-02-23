@@ -7,7 +7,7 @@ interface AnalysisResult {
   score: number;
   summary: string;
   strengths: string[];
-  gaps: string[];
+  gaps: { issue: string; fix: string }[];
   rewrite_suggestions: { original: string; improved: string }[];
 }
 
@@ -333,8 +333,16 @@ export default function Home() {
               <div className="info-card">
                 <div className="info-card-title" style={{ color: "var(--red)" }}>⚠️ Skill Gaps</div>
                 {result.gaps.map((g, i) => (
-                  <div key={i} className="info-item">
-                    <div className="info-dot" style={{ background: "var(--red)" }} />{g}
+                  <div key={i} style={{ marginBottom: "0.9rem" }}>
+                    <div className="info-item" style={{ marginBottom: "0.2rem" }}>
+                      <div className="info-dot" style={{ background: "var(--red)" }} />
+                      <span style={{ color: "var(--text)", fontWeight: 500 }}>{g.issue ?? g}</span>
+                    </div>
+                    {g.fix && (
+                      <div style={{ marginLeft: "1.1rem", fontSize: "0.78rem", color: "var(--accent)", lineHeight: 1.5, background: "rgba(124,106,247,0.08)", border: "1px solid rgba(124,106,247,0.15)", borderRadius: "8px", padding: "0.4rem 0.7rem" }}>
+                        💡 {g.fix}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

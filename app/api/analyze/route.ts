@@ -36,7 +36,11 @@ Return ONLY a valid JSON object with exactly this structure, no markdown, no exp
   "score": <number 0-100>,
   "summary": "<2 sentence overview of the candidate's fit>",
   "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
-  "gaps": ["<gap 1>", "<gap 2>", "<gap 3>"],
+  "gaps": [
+    { "issue": "<gap 1>", "fix": "<specific actionable advice to fix this gap>" },
+    { "issue": "<gap 2>", "fix": "<specific actionable advice to fix this gap>" },
+    { "issue": "<gap 3>", "fix": "<specific actionable advice to fix this gap>" }
+  ],
   "rewrite_suggestions": [
     { "original": "<original bullet from resume>", "improved": "<improved version tailored to JD>" },
     { "original": "<original bullet from resume>", "improved": "<improved version tailored to JD>" },
