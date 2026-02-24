@@ -1,5 +1,7 @@
 "use client";
 import { useState, useRef, useCallback } from "react";
+import jsPDF from "jspdf";
+import "./page.css";
 
 type AppStatus = "idle" | "parsing" | "analyzing" | "success" | "error";
 
@@ -105,124 +107,91 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleDownloadPDF = () => {
+    if (!result) return;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = 210;
+    const margin = 18;
+    const contentW = pageW - margin * 2;
+    let y = 20;
+
+    const addText = (text: string, size: number, color: [number,number,number], bold = false, indent = 0) => {
+      doc.setFontSize(size);
+      doc.setTextColor(...color);
+      doc.setFont("helvetica", bold ? "bold" : "normal");
+      const lines = doc.splitTextToSize(text, contentW - indent);
+      lines.forEach((line: string) => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        doc.text(line, margin + indent, y);
+        y += size * 0.45;
+      });
+      y += 2;
+    };
+
+    const addDivider = (color: [number,number,number] = [50,50,70]) => {
+      if (y > 275) { doc.addPage(); y = 20; }
+      doc.setDrawColor(...color);
+      doc.setLineWidth(0.3);
+      doc.line(margin, y, pageW - margin, y);
+      y += 5;
+    };
+
+    // Header
+    doc.setFillColor(27, 42, 74);
+    doc.rect(0, 0, 210, 28, "F");
+    doc.setFontSize(18); doc.setFont("helvetica","bold"); doc.setTextColor(240,238,248);
+    doc.text("Resume Analysis Report", margin, 13);
+    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(180,170,210);
+    doc.text(`Generated on ${new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}`, margin, 21);
+    y = 38;
+
+    // Score
+    const scoreColor: [number,number,number] = result.score >= 80 ? [74,222,128] : result.score >= 60 ? [251,191,36] : [248,113,113];
+    const scoreLabel = result.score >= 80 ? "Strong Match" : result.score >= 60 ? "Good Match" : result.score >= 40 ? "Partial Match" : "Weak Match";
+    addText(`Match Score: ${result.score}/100 — ${scoreLabel}`, 16, scoreColor, true);
+    addText(result.summary, 10, [150,140,180]);
+    addDivider();
+
+    // Strengths
+    addText("STRENGTHS", 11, [74,222,128], true);
+    result.strengths.forEach(s => addText(`+ ${s}`, 9.5, [200,195,230], false, 3));
+    y += 3;
+    addDivider();
+
+    // Gaps
+    addText("SKILL GAPS  HOW TO FIX", 11, [248,113,113], true);
+    result.gaps.forEach(g => {
+      const issue = typeof g === "string" ? g : g.issue;
+      const fix = typeof g === "string" ? "" : g.fix;
+      addText(`- ${issue}`, 9.5, [200,195,230], false, 3);
+      if (fix) addText(`  Fix: ${fix}`, 9, [124,106,247], false, 6);
+    });
+    y += 3;
+    addDivider();
+
+    // Rewrites
+    addText("REWRITE SUGGESTIONS", 11, [124,106,247], true);
+    result.rewrite_suggestions.forEach((rw, i) => {
+      addText(`${i+1}. Before:`, 9, [180,100,100], true, 2);
+      addText(rw.original, 9, [160,155,190], false, 5);
+      addText(`   After:`, 9, [80,160,110], true, 2);
+      addText(rw.improved, 9, [200,230,210], false, 5);
+      y += 2;
+    });
+
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7); doc.setTextColor(100,95,130);
+      doc.text(`ResumeAI Report · Page ${i} of ${pageCount}`, margin, 290);
+    }
+
+    doc.save("resume-analysis.pdf");
+  };
+
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        :root {
-          --bg: #0A0A0F; --card: #16161F;
-          --border: rgba(255,255,255,0.07); --border-hover: rgba(255,255,255,0.15);
-          --text: #F0EEF8; --muted: #7A7890;
-          --accent: #7C6AF7; --accent-glow: rgba(124,106,247,0.22);
-          --accent2: #F7A06A; --green: #4ADE80; --red: #F87171; --yellow: #FBBF24;
-        }
-        body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; overflow-x:hidden; }
-        body::before { content:''; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:0.4; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); }
-        .blob { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; animation:drift 12s ease-in-out infinite alternate; }
-        .blob-1 { width:600px; height:600px; background:rgba(124,106,247,0.12); top:-200px; left:-150px; }
-        .blob-2 { width:500px; height:500px; background:rgba(247,160,106,0.08); bottom:-100px; right:-100px; animation-delay:-6s; }
-        @keyframes drift { from{transform:translate(0,0) scale(1);}to{transform:translate(30px,-30px) scale(1.05);} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);} }
-        @keyframes spin { to{transform:rotate(360deg);} }
-        @keyframes pulse { 0%,100%{opacity:1;}50%{opacity:0.3;} }
-        @keyframes slideDown { from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);} }
-
-        nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:1.2rem 0; border-bottom:1px solid var(--border); background:rgba(10,10,15,0.8); backdrop-filter:blur(20px); }
-        .nav-inner { max-width:1100px; margin:0 auto; padding:0 2rem; display:flex; align-items:center; justify-content:space-between; }
-        .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.15rem; letter-spacing:-0.02em; display:flex; align-items:center; gap:0.5rem; }
-        .logo-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px var(--accent); }
-        .nav-badge { font-size:0.72rem; padding:0.25rem 0.7rem; border-radius:100px; border:1px solid var(--border); color:var(--muted); letter-spacing:0.05em; }
-        .wrapper { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:0 2rem; }
-        .hero { padding:140px 0 60px; text-align:center; }
-        .hero-label { display:inline-flex; align-items:center; gap:0.5rem; font-size:0.75rem; font-weight:500; letter-spacing:0.1em; color:var(--accent); padding:0.35rem 0.9rem; border:1px solid rgba(124,106,247,0.3); border-radius:100px; margin-bottom:2rem; text-transform:uppercase; animation:fadeUp 0.6s ease both; }
-        .hero-label-dot { width:5px; height:5px; border-radius:50%; background:var(--accent); animation:pulse 2s infinite; }
-        h1 { font-family:'Syne',sans-serif; font-weight:800; font-size:clamp(2.8rem,6vw,5.2rem); line-height:1.0; letter-spacing:-0.04em; margin-bottom:1.5rem; animation:fadeUp 0.6s 0.1s ease both; }
-        .h1-line2 { background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-        .hero-sub { font-size:1.1rem; font-weight:300; color:var(--muted); max-width:500px; margin:0 auto 3rem; line-height:1.7; animation:fadeUp 0.6s 0.2s ease both; }
-        .stats { display:flex; justify-content:center; gap:3rem; margin-bottom:4rem; animation:fadeUp 0.6s 0.3s ease both; }
-        .stat { text-align:center; }
-        .stat-num { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; letter-spacing:-0.03em; }
-        .stat-label { font-size:0.78rem; color:var(--muted); margin-top:0.2rem; letter-spacing:0.05em; }
-        .stat-divider { width:1px; background:var(--border); }
-        .main-card { background:var(--card); border:1px solid var(--border); border-radius:24px; overflow:hidden; margin-bottom:1.5rem; animation:fadeUp 0.6s 0.35s ease both; box-shadow:0 0 0 1px rgba(255,255,255,0.03),0 40px 80px rgba(0,0,0,0.4); }
-        .card-header { padding:1.25rem 1.75rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:0.5rem; background:rgba(255,255,255,0.02); }
-        .traffic-dot { width:11px; height:11px; border-radius:50%; }
-        .card-header-title { margin-left:auto; font-size:0.75rem; color:var(--muted); letter-spacing:0.05em; font-weight:500; }
-        .card-body { display:grid; grid-template-columns:1fr 1fr; }
-        .panel { padding:2rem; }
-        .panel:first-child { border-right:1px solid var(--border); }
-        .panel-label { font-size:0.7rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:1rem; display:flex; align-items:center; gap:0.4rem; }
-        .drop-zone { border:1.5px dashed var(--border); border-radius:16px; padding:2.5rem 1.5rem; text-align:center; cursor:pointer; transition:all 0.25s ease; background:rgba(255,255,255,0.015); }
-        .drop-zone:hover,.drop-zone.drag-over { border-color:var(--accent); background:var(--accent-glow); }
-        .drop-zone.has-file { border-color:var(--green); background:rgba(74,222,128,0.06); border-style:solid; }
-        .drop-zone.has-error { border-color:var(--red); background:rgba(248,113,113,0.06); border-style:solid; }
-        .drop-icon { width:48px; height:48px; border-radius:12px; background:rgba(124,106,247,0.15); border:1px solid rgba(124,106,247,0.25); display:flex; align-items:center; justify-content:center; margin:0 auto 1rem; font-size:1.3rem; transition:transform 0.25s ease; }
-        .drop-zone:hover .drop-icon { transform:translateY(-3px); }
-        .drop-title { font-size:0.9rem; font-weight:500; margin-bottom:0.3rem; }
-        .drop-sub { font-size:0.78rem; color:var(--muted); }
-        .file-meta { display:flex; align-items:center; justify-content:center; gap:0.5rem; margin-top:0.5rem; font-size:0.8rem; color:var(--green); font-weight:500; }
-        textarea { width:100%; background:rgba(255,255,255,0.03); border:1.5px solid var(--border); border-radius:12px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.88rem; font-weight:300; line-height:1.7; padding:1rem 1.1rem; resize:none; outline:none; transition:border-color 0.2s; min-height:180px; }
-        textarea::placeholder { color:var(--muted); }
-        textarea:focus { border-color:var(--accent); }
-        .card-footer { padding:1.25rem 2rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.01); gap:1rem; }
-        .footer-hint { font-size:0.78rem; color:var(--muted); }
-        .btn-primary { display:flex; align-items:center; gap:0.6rem; background:var(--accent); color:#fff; border:none; border-radius:12px; padding:0.75rem 1.75rem; font-family:'Syne',sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; transition:all 0.2s ease; box-shadow:0 0 30px rgba(124,106,247,0.3); white-space:nowrap; }
-        .btn-primary:hover:not(:disabled) { background:#6B59E8; box-shadow:0 0 40px rgba(124,106,247,0.5); transform:translateY(-1px); }
-        .btn-primary:disabled { opacity:0.4; cursor:not-allowed; box-shadow:none; }
-        .btn-arrow { display:inline-block; transition:transform 0.2s; }
-        .btn-primary:hover:not(:disabled) .btn-arrow { transform:translateX(3px); }
-        .spinner { width:16px; height:16px; border:2px solid rgba(255,255,255,0.3); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
-        .error-banner { border-radius:16px; padding:1.25rem 1.5rem; margin-bottom:1.5rem; animation:slideDown 0.3s ease; border:1px solid rgba(248,113,113,0.25); background:rgba(248,113,113,0.08); }
-        .banner-top { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.5rem; }
-        .banner-title { font-family:'Syne',sans-serif; font-weight:700; font-size:0.95rem; color:var(--red); }
-        .results { animation:slideDown 0.4s ease; margin-bottom:3rem; }
-        .score-card { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:2rem; margin-bottom:1rem; display:flex; align-items:center; gap:2.5rem; }
-        .score-ring-wrap { position:relative; flex-shrink:0; }
-        .score-ring-wrap svg { transform:rotate(-90deg); }
-        .score-ring-bg { fill:none; stroke:rgba(255,255,255,0.06); stroke-width:8; }
-        .score-ring-fill { fill:none; stroke-width:8; stroke-linecap:round; transition:stroke-dashoffset 1s ease; }
-        .score-number { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-        .score-num { font-family:'Syne',sans-serif; font-weight:800; font-size:2rem; line-height:1; }
-        .score-max { font-size:0.7rem; color:var(--muted); }
-        .score-info { flex:1; }
-        .score-label { font-family:'Syne',sans-serif; font-weight:800; font-size:1.4rem; letter-spacing:-0.02em; margin-bottom:0.5rem; }
-        .score-summary { font-size:0.9rem; color:var(--muted); line-height:1.6; font-weight:300; }
-        .two-col { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
-        .info-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.5rem; }
-        .info-card-title { font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem; }
-        .info-item { display:flex; align-items:flex-start; gap:0.5rem; margin-bottom:0.6rem; font-size:0.85rem; color:var(--muted); line-height:1.5; }
-        .info-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; margin-top:0.45rem; }
-        .rewrites-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.5rem; margin-bottom:1rem; }
-        .rewrites-title { font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem; margin-bottom:1.25rem; display:flex; align-items:center; gap:0.5rem; }
-        .rewrite-item { margin-bottom:1.25rem; padding-bottom:1.25rem; border-bottom:1px solid var(--border); }
-        .rewrite-item:last-child { margin-bottom:0; padding-bottom:0; border-bottom:none; }
-        .rewrite-label { font-size:0.68rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.35rem; }
-        .rewrite-text { font-size:0.85rem; line-height:1.6; padding:0.75rem 1rem; border-radius:10px; margin-bottom:0.5rem; }
-        .rewrite-before { background:rgba(248,113,113,0.08); border:1px solid rgba(248,113,113,0.15); color:var(--muted); }
-        .rewrite-after { background:rgba(74,222,128,0.08); border:1px solid rgba(74,222,128,0.15); color:var(--text); }
-        .copy-btn { display:flex; align-items:center; gap:0.4rem; margin-top:0.4rem; background:transparent; border:1px solid rgba(74,222,128,0.25); color:var(--green); border-radius:8px; padding:0.3rem 0.75rem; font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:"DM Sans",sans-serif; }
-        .copy-btn:hover { background:rgba(74,222,128,0.1); border-color:var(--green); }
-        .copy-btn.copied { background:rgba(74,222,128,0.15); border-color:var(--green); color:var(--green); }
-        .features { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:5rem; animation:fadeUp 0.6s 0.45s ease both; }
-        .feature-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.5rem; transition:border-color 0.25s,transform 0.25s; position:relative; overflow:hidden; }
-        .feature-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--accent),transparent); opacity:0; transition:opacity 0.3s; }
-        .feature-card:hover { border-color:var(--border-hover); transform:translateY(-3px); }
-        .feature-card:hover::before { opacity:1; }
-        .feature-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; margin-bottom:1rem; }
-        .feature-title { font-family:'Syne',sans-serif; font-weight:700; font-size:0.95rem; margin-bottom:0.4rem; }
-        .feature-desc { font-size:0.82rem; color:var(--muted); line-height:1.6; font-weight:300; }
-        .btn-reset { background:transparent; border:1.5px solid var(--border); color:var(--muted); border-radius:12px; padding:0.75rem 2rem; font-family:"Syne",sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; transition:all 0.2s ease; }
-        .btn-reset:hover { border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
-        .page-footer { text-align:center; padding:2rem 0 4rem; color:var(--muted); font-size:0.78rem; border-top:1px solid var(--border); }
-        .page-footer a { color:var(--accent); text-decoration:none; }
-        @media(max-width:680px) {
-          .card-body{grid-template-columns:1fr;} .panel:first-child{border-right:none;border-bottom:1px solid var(--border);}
-          .features{grid-template-columns:1fr;} .two-col{grid-template-columns:1fr;} .stats{gap:1.5rem;}
-          .card-footer{flex-direction:column;align-items:stretch;} .btn-primary{justify-content:center;}
-          .score-card{flex-direction:column;text-align:center;}
-        }
-      `}</style>
 
       <div className="blob blob-1" /><div className="blob blob-2" />
 
@@ -392,11 +361,11 @@ export default function Home() {
 
         {/* Scan Another Resume button */}
         {status === "success" && (
-          <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-            <button
-              className="btn-reset"
-              onClick={handleReset}
-            >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem", flexWrap: "wrap", marginBottom: "3rem" }}>
+            <button className="btn-download" onClick={handleDownloadPDF}>
+              ⬇ Download Report PDF
+            </button>
+            <button className="btn-reset" onClick={handleReset}>
               ↩ Scan Another Resume
             </button>
           </div>
