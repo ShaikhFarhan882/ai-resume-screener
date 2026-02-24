@@ -19,6 +19,13 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  const handleCopy = async (text: string, index: number) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -88,6 +95,15 @@ export default function Home() {
 
   const scoreColor = (s: number) => s >= 80 ? "#4ADE80" : s >= 60 ? "#FBBF24" : "#F87171";
   const scoreLabel = (s: number) => s >= 80 ? "Strong Match" : s >= 60 ? "Good Match" : s >= 40 ? "Partial Match" : "Weak Match";
+
+  const handleReset = () => {
+    setFile(null);
+    setJd("");
+    setStatus("idle");
+    setResult(null);
+    setErrorMsg("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <>
@@ -185,6 +201,9 @@ export default function Home() {
         .rewrite-text { font-size:0.85rem; line-height:1.6; padding:0.75rem 1rem; border-radius:10px; margin-bottom:0.5rem; }
         .rewrite-before { background:rgba(248,113,113,0.08); border:1px solid rgba(248,113,113,0.15); color:var(--muted); }
         .rewrite-after { background:rgba(74,222,128,0.08); border:1px solid rgba(74,222,128,0.15); color:var(--text); }
+        .copy-btn { display:flex; align-items:center; gap:0.4rem; margin-top:0.4rem; background:transparent; border:1px solid rgba(74,222,128,0.25); color:var(--green); border-radius:8px; padding:0.3rem 0.75rem; font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:"DM Sans",sans-serif; }
+        .copy-btn:hover { background:rgba(74,222,128,0.1); border-color:var(--green); }
+        .copy-btn.copied { background:rgba(74,222,128,0.15); border-color:var(--green); color:var(--green); }
         .features { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:5rem; animation:fadeUp 0.6s 0.45s ease both; }
         .feature-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.5rem; transition:border-color 0.25s,transform 0.25s; position:relative; overflow:hidden; }
         .feature-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--accent),transparent); opacity:0; transition:opacity 0.3s; }
@@ -193,6 +212,8 @@ export default function Home() {
         .feature-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; margin-bottom:1rem; }
         .feature-title { font-family:'Syne',sans-serif; font-weight:700; font-size:0.95rem; margin-bottom:0.4rem; }
         .feature-desc { font-size:0.82rem; color:var(--muted); line-height:1.6; font-weight:300; }
+        .btn-reset { background:transparent; border:1.5px solid var(--border); color:var(--muted); border-radius:12px; padding:0.75rem 2rem; font-family:"Syne",sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; transition:all 0.2s ease; }
+        .btn-reset:hover { border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
         .page-footer { text-align:center; padding:2rem 0 4rem; color:var(--muted); font-size:0.78rem; border-top:1px solid var(--border); }
         .page-footer a { color:var(--accent); text-decoration:none; }
         @media(max-width:680px) {
@@ -357,9 +378,27 @@ export default function Home() {
                   <div className="rewrite-text rewrite-before">{rw.original}</div>
                   <div className="rewrite-label" style={{ color: "var(--green)" }}>After</div>
                   <div className="rewrite-text rewrite-after">{rw.improved}</div>
+                  <button
+                    className={`copy-btn ${copiedIndex === i ? "copied" : ""}`}
+                    onClick={() => handleCopy(rw.improved, i)}
+                  >
+                    {copiedIndex === i ? "✅ Copied!" : "📋 Copy"}
+                  </button>
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Scan Another Resume button */}
+        {status === "success" && (
+          <div style={{ textAlign: "center", marginBottom: "3rem" }}>
+            <button
+              className="btn-reset"
+              onClick={handleReset}
+            >
+              ↩ Scan Another Resume
+            </button>
           </div>
         )}
 
