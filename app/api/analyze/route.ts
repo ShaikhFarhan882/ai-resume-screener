@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const prompt = `You are an expert technical recruiter and career coach with 10+ years of experience.
+    const prompt = `You are an expert technical recruiter and career coach with 10+ years of experience, also specialized in ATS (Applicant Tracking System) optimization.
 
 Analyze the following resume against the job description and return a detailed evaluation.
 
@@ -45,18 +45,49 @@ Return ONLY a valid JSON object with exactly this structure, no markdown, no exp
     { "original": "<original bullet from resume>", "improved": "<improved version tailored to JD>" },
     { "original": "<original bullet from resume>", "improved": "<improved version tailored to JD>" },
     { "original": "<original bullet from resume>", "improved": "<improved version tailored to JD>" }
-  ]
+  ],
+  "ats": {
+    "ats_score": <number 0-100, overall ATS compatibility score>,
+    "keywords": {
+      "found": ["<keyword found in both resume and JD>", "<keyword 2>", "<keyword 3>"],
+      "missing": ["<important JD keyword missing from resume>", "<keyword 2>", "<keyword 3>"]
+    },
+    "formatting_warnings": [
+      "<warning about tables, columns, headers, graphics, or other ATS-unfriendly formatting detected>",
+      "<warning 2 if applicable>"
+    ],
+    "sections": {
+      "contact": <true if contact info section detected>,
+      "summary": <true if professional summary/objective detected>,
+      "experience": <true if work experience section detected>,
+      "education": <true if education section detected>,
+      "skills": <true if skills section detected>,
+      "certifications": <true if certifications section detected>
+    },
+    "ats_tips": [
+      "<specific actionable tip to improve ATS score>",
+      "<tip 2>",
+      "<tip 3>"
+    ]
+  }
 }
 
-Scoring guide:
+Scoring guide for main score:
 - 80-100: Strong match, most requirements met
 - 60-79: Good match, some gaps
 - 40-59: Partial match, significant gaps
 - 0-39: Weak match, major gaps
 
+ATS score guide:
+- 80-100: Well optimized for ATS parsing
+- 60-79: Mostly compatible, minor issues
+- 40-59: Several ATS issues that may cause filtering
+- 0-39: Major ATS problems, likely to be filtered out
+
+For formatting_warnings: look for indicators in the text like unusual characters, garbled text, missing spaces between words (which suggests columns/tables), or very sparse text (which suggests graphics/images). Return an empty array [] if no formatting issues detected.
+
 Be specific and actionable. Reference actual skills and keywords from the job description.`;
 
-    // ── Call Gemini 2.5 Flash with x-goog-api-key header ──
     const geminiRes = await fetch(GEMINI_URL, {
       method: "POST",
       headers: {
@@ -86,8 +117,6 @@ Be specific and actionable. Reference actual skills and keywords from the job de
     }
 
     const geminiData = await geminiRes.json();
-
-    // Extract text from Gemini response
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
     if (!rawText) {
@@ -97,7 +126,6 @@ Be specific and actionable. Reference actual skills and keywords from the job de
       );
     }
 
-    // Strip markdown code blocks if present
     const cleaned = rawText
       .replace(/```json/gi, "")
       .replace(/```/g, "")
@@ -114,7 +142,6 @@ Be specific and actionable. Reference actual skills and keywords from the job de
       );
     }
 
-    // Validate required fields
     if (
       typeof parsed.score !== "number" ||
       !parsed.summary ||
@@ -128,6 +155,9 @@ Be specific and actionable. Reference actual skills and keywords from the job de
       );
     }
 
+    // Build ATS object with fallbacks
+    const ats = parsed.ats ?? {};
+
     return NextResponse.json({
       success: true,
       score: Math.min(100, Math.max(0, Math.round(parsed.score))),
@@ -135,6 +165,23 @@ Be specific and actionable. Reference actual skills and keywords from the job de
       strengths: parsed.strengths.slice(0, 6),
       gaps: parsed.gaps.slice(0, 6),
       rewrite_suggestions: parsed.rewrite_suggestions.slice(0, 5),
+      ats: {
+        ats_score: Math.min(100, Math.max(0, Math.round(ats.ats_score ?? 0))),
+        keywords: {
+          found: (ats.keywords?.found ?? []).slice(0, 12),
+          missing: (ats.keywords?.missing ?? []).slice(0, 12),
+        },
+        formatting_warnings: (ats.formatting_warnings ?? []).slice(0, 5),
+        sections: {
+          contact: ats.sections?.contact ?? false,
+          summary: ats.sections?.summary ?? false,
+          experience: ats.sections?.experience ?? false,
+          education: ats.sections?.education ?? false,
+          skills: ats.sections?.skills ?? false,
+          certifications: ats.sections?.certifications ?? false,
+        },
+        ats_tips: (ats.ats_tips ?? []).slice(0, 5),
+      },
     });
 
   } catch (err) {

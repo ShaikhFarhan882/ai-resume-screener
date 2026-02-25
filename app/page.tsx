@@ -5,12 +5,31 @@ import "./page.css";
 
 type AppStatus = "idle" | "parsing" | "analyzing" | "success" | "error";
 
+interface ATSResult {
+  ats_score: number;
+  keywords: {
+    found: string[];
+    missing: string[];
+  };
+  formatting_warnings: string[];
+  sections: {
+    contact: boolean;
+    summary: boolean;
+    experience: boolean;
+    education: boolean;
+    skills: boolean;
+    certifications: boolean;
+  };
+  ats_tips: string[];
+}
+
 interface AnalysisResult {
   score: number;
   summary: string;
   strengths: string[];
   gaps: { issue: string; fix: string }[];
   rewrite_suggestions: { original: string; improved: string }[];
+  ats: ATSResult;
 }
 
 export default function Home() {
@@ -60,7 +79,6 @@ export default function Home() {
     setResult(null);
 
     try {
-      // Step 1: Parse PDF
       const formData = new FormData();
       formData.append("resume", file);
       const parseRes = await fetch("/api/parse-resume", { method: "POST", body: formData });
@@ -71,7 +89,6 @@ export default function Home() {
         return;
       }
 
-      // Step 2: Analyze with Gemini
       setStatus("analyzing");
       const analyzeRes = await fetch("/api/analyze", {
         method: "POST",
@@ -97,6 +114,16 @@ export default function Home() {
 
   const scoreColor = (s: number) => s >= 80 ? "#4ADE80" : s >= 60 ? "#FBBF24" : "#F87171";
   const scoreLabel = (s: number) => s >= 80 ? "Strong Match" : s >= 60 ? "Good Match" : s >= 40 ? "Partial Match" : "Weak Match";
+  const atsLabel  = (s: number) => s >= 80 ? "ATS Ready" : s >= 60 ? "Mostly Compatible" : s >= 40 ? "Needs Work" : "High Risk";
+
+  const sectionLabels: Record<string, string> = {
+    contact: "Contact Info",
+    summary: "Summary",
+    experience: "Experience",
+    education: "Education",
+    skills: "Skills",
+    certifications: "Certifications",
+  };
 
   const handleReset = () => {
     setFile(null);
@@ -146,10 +173,25 @@ export default function Home() {
     y = 38;
 
     // Score
-    const scoreColor: [number,number,number] = result.score >= 80 ? [74,222,128] : result.score >= 60 ? [251,191,36] : [248,113,113];
-    const scoreLabel = result.score >= 80 ? "Strong Match" : result.score >= 60 ? "Good Match" : result.score >= 40 ? "Partial Match" : "Weak Match";
-    addText(`Match Score: ${result.score}/100 — ${scoreLabel}`, 16, scoreColor, true);
+    const sc: [number,number,number] = result.score >= 80 ? [74,222,128] : result.score >= 60 ? [251,191,36] : [248,113,113];
+    const sl = result.score >= 80 ? "Strong Match" : result.score >= 60 ? "Good Match" : result.score >= 40 ? "Partial Match" : "Weak Match";
+    addText(`Match Score: ${result.score}/100 — ${sl}`, 16, sc, true);
     addText(result.summary, 10, [150,140,180]);
+    addDivider();
+
+    // ATS Score
+    const ac: [number,number,number] = result.ats.ats_score >= 80 ? [74,222,128] : result.ats.ats_score >= 60 ? [251,191,36] : [248,113,113];
+    const al = atsLabel(result.ats.ats_score);
+    addText(`ATS Score: ${result.ats.ats_score}/100 — ${al}`, 13, ac, true);
+    if (result.ats.keywords.found.length > 0)
+      addText(`Keywords Found: ${result.ats.keywords.found.join(", ")}`, 9, [100,200,130], false, 3);
+    if (result.ats.keywords.missing.length > 0)
+      addText(`Keywords Missing: ${result.ats.keywords.missing.join(", ")}`, 9, [200,100,100], false, 3);
+    if (result.ats.formatting_warnings.length > 0) {
+      addText("Formatting Warnings:", 9, [251,191,36], true, 3);
+      result.ats.formatting_warnings.forEach(w => addText(`⚠ ${w}`, 9, [200,195,230], false, 6));
+    }
+    y += 2;
     addDivider();
 
     // Strengths
@@ -161,10 +203,8 @@ export default function Home() {
     // Gaps
     addText("SKILL GAPS  HOW TO FIX", 11, [248,113,113], true);
     result.gaps.forEach(g => {
-      const issue = typeof g === "string" ? g : g.issue;
-      const fix = typeof g === "string" ? "" : g.fix;
-      addText(`- ${issue}`, 9.5, [200,195,230], false, 3);
-      if (fix) addText(`  Fix: ${fix}`, 9, [124,106,247], false, 6);
+      addText(`- ${g.issue}`, 9.5, [200,195,230], false, 3);
+      if (g.fix) addText(`  Fix: ${g.fix}`, 9, [124,106,247], false, 6);
     });
     y += 3;
     addDivider();
@@ -192,13 +232,12 @@ export default function Home() {
 
   return (
     <>
-
       <div className="blob blob-1" /><div className="blob blob-2" />
 
       <nav>
         <div className="nav-inner">
           <div className="logo"><div className="logo-dot" />ResumeAI</div>
-          <div className="nav-badge">BETA</div>
+          <div className="nav-badge">V1</div>
         </div>
       </nav>
 
@@ -206,7 +245,7 @@ export default function Home() {
         <section className="hero">
           <div className="hero-label"><div className="hero-label-dot" />Powered by AI</div>
           <h1>Land the job<br /><span className="h1-line2">you actually want.</span></h1>
-          <p className="hero-sub">Upload your resume, paste a job description — get a match score, skill gap analysis, and rewrite suggestions in seconds.</p>
+          <p className="hero-sub">Upload your resume, paste a job description — get a match score, ATS analysis, skill gaps, and rewrite suggestions in seconds.</p>
           <div className="stats">
             <div className="stat"><div className="stat-num">84%</div><div className="stat-label">Avg. score lift</div></div>
             <div className="stat-divider" />
@@ -286,7 +325,7 @@ export default function Home() {
         {/* Results */}
         {status === "success" && result && (
           <div className="results">
-            {/* Score ring */}
+            {/* Match Score ring */}
             <div className="score-card">
               <div className="score-ring-wrap">
                 <svg width="110" height="110" viewBox="0 0 110 110">
@@ -309,6 +348,136 @@ export default function Home() {
                 <div className="score-summary">{result.summary}</div>
               </div>
             </div>
+
+            {/* ── ATS Score Card ── */}
+            {result.ats && (
+              <div className="ats-card">
+                <div className="ats-card-header">
+                  <div className="ats-header-left">
+                    <span className="ats-icon">🤖</span>
+                    <div>
+                      <div className="ats-title">ATS Compatibility</div>
+                      <div className="ats-subtitle">How well your resume passes automated screening systems</div>
+                    </div>
+                  </div>
+                  <div className="ats-score-badge" style={{ color: scoreColor(result.ats.ats_score), borderColor: scoreColor(result.ats.ats_score) + "40", background: scoreColor(result.ats.ats_score) + "12" }}>
+                    <span className="ats-score-num">{result.ats.ats_score}</span>
+                    <span className="ats-score-denom">/100</span>
+                    <span className="ats-score-label">{atsLabel(result.ats.ats_score)}</span>
+                  </div>
+                </div>
+
+                {/* ATS Progress bar */}
+                <div className="ats-bar-wrap">
+                  <div className="ats-bar-track">
+                    <div
+                      className="ats-bar-fill"
+                      style={{
+                        width: `${result.ats.ats_score}%`,
+                        background: scoreColor(result.ats.ats_score),
+                        boxShadow: `0 0 12px ${scoreColor(result.ats.ats_score)}60`,
+                      }}
+                    />
+                  </div>
+                  <div className="ats-bar-ticks">
+                    <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
+                  </div>
+                </div>
+
+                <div className="ats-grid">
+                  {/* Keywords Found */}
+                  <div className="ats-section">
+                    <div className="ats-section-title" style={{ color: "var(--green)" }}>
+                      <span>✅</span> Keywords Found
+                      <span className="ats-count-badge" style={{ background: "rgba(74,222,128,0.12)", color: "var(--green)", border: "1px solid rgba(74,222,128,0.25)" }}>
+                        {result.ats.keywords.found.length}
+                      </span>
+                    </div>
+                    <div className="ats-tags">
+                      {result.ats.keywords.found.length > 0
+                        ? result.ats.keywords.found.map((kw, i) => (
+                            <span key={i} className="ats-tag ats-tag-found">{kw}</span>
+                          ))
+                        : <span className="ats-empty">No matching keywords detected</span>
+                      }
+                    </div>
+                  </div>
+
+                  {/* Keywords Missing */}
+                  <div className="ats-section">
+                    <div className="ats-section-title" style={{ color: "var(--red)" }}>
+                      <span>❌</span> Keywords Missing
+                      <span className="ats-count-badge" style={{ background: "rgba(248,113,113,0.12)", color: "var(--red)", border: "1px solid rgba(248,113,113,0.25)" }}>
+                        {result.ats.keywords.missing.length}
+                      </span>
+                    </div>
+                    <div className="ats-tags">
+                      {result.ats.keywords.missing.length > 0
+                        ? result.ats.keywords.missing.map((kw, i) => (
+                            <span key={i} className="ats-tag ats-tag-missing">{kw}</span>
+                          ))
+                        : <span className="ats-empty">Great — no critical keywords missing!</span>
+                      }
+                    </div>
+                  </div>
+
+                  {/* Section Detection */}
+                  <div className="ats-section">
+                    <div className="ats-section-title" style={{ color: "var(--accent2)" }}>
+                      <span>📋</span> Section Detection
+                    </div>
+                    <div className="ats-sections-grid">
+                      {Object.entries(result.ats.sections).map(([key, found]) => (
+                        <div key={key} className={`ats-section-pill ${found ? "section-found" : "section-missing"}`}>
+                          <span className="section-pill-dot" />
+                          {sectionLabels[key] ?? key}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Formatting Warnings */}
+                  <div className="ats-section">
+                    <div className="ats-section-title" style={{ color: "var(--yellow)" }}>
+                      <span>⚠️</span> Formatting Warnings
+                      <span className="ats-count-badge" style={{ background: "rgba(251,191,36,0.12)", color: "var(--yellow)", border: "1px solid rgba(251,191,36,0.25)" }}>
+                        {result.ats.formatting_warnings.length}
+                      </span>
+                    </div>
+                    {result.ats.formatting_warnings.length > 0 ? (
+                      <div className="ats-warnings-list">
+                        {result.ats.formatting_warnings.map((w, i) => (
+                          <div key={i} className="ats-warning-item">
+                            <span className="warning-icon">⚡</span>
+                            <span>{w}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="ats-warning-item ats-warning-good">
+                        <span className="warning-icon">✓</span>
+                        <span>No formatting issues detected — clean structure!</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ATS Tips */}
+                {result.ats.ats_tips.length > 0 && (
+                  <div className="ats-tips">
+                    <div className="ats-tips-title">💡 ATS Optimization Tips</div>
+                    <div className="ats-tips-list">
+                      {result.ats.ats_tips.map((tip, i) => (
+                        <div key={i} className="ats-tip-item">
+                          <span className="ats-tip-num">{i + 1}</span>
+                          <span>{tip}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Strengths & Gaps */}
             <div className="two-col">
@@ -380,9 +549,9 @@ export default function Home() {
               <div className="feature-desc">Get a 0–100 score showing exactly how well your resume aligns with the job requirements.</div>
             </div>
             <div className="feature-card">
-              <div className="feature-icon" style={{ background: "rgba(247,160,106,0.15)", border: "1px solid rgba(247,160,106,0.25)" }}>🔍</div>
-              <div className="feature-title">Skill Gap Analysis</div>
-              <div className="feature-desc">See which skills you're missing and which strengths already make you a strong candidate.</div>
+              <div className="feature-icon" style={{ background: "rgba(247,160,106,0.15)", border: "1px solid rgba(247,160,106,0.25)" }}>🤖</div>
+              <div className="feature-title">ATS Score</div>
+              <div className="feature-desc">Check if your resume can pass automated screening systems with keyword and formatting analysis.</div>
             </div>
             <div className="feature-card">
               <div className="feature-icon" style={{ background: "rgba(74,222,128,0.15)", border: "1px solid rgba(74,222,128,0.25)" }}>✍️</div>
@@ -392,7 +561,7 @@ export default function Home() {
           </div>
         )}
 
-        <div className="page-footer">Built with Next.js + AI · <a href="#">View on GitHub</a></div>
+        <div className="page-footer">Shaikh Farhan <a href="#">View on GitHub</a></div>
       </div>
     </>
   );

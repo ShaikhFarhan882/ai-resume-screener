@@ -438,3 +438,325 @@ textarea:focus { border-color: var(--accent); }
   .btn-primary { justify-content: center; }
   .score-card  { flex-direction: column; text-align: center; }
 }
+
+/* ════════════════════════════════════════
+   ATS SCORE CARD
+════════════════════════════════════════ */
+
+.ats-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 1.75rem;
+  margin-bottom: 1rem;
+  animation: slideDown 0.4s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.ats-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(124,106,247,0.6), rgba(247,160,106,0.6), transparent);
+}
+
+/* ── Header ── */
+.ats-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.ats-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.ats-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.ats-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.15rem;
+}
+
+.ats-subtitle {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 300;
+  line-height: 1.4;
+}
+
+.ats-score-badge {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  border: 1px solid;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ats-score-num {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.8rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.ats-score-denom {
+  font-size: 0.75rem;
+  color: var(--muted);
+  align-self: flex-end;
+  margin-bottom: 0.1rem;
+}
+
+.ats-score-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  width: 100%;
+  text-align: center;
+  margin-top: 0.1rem;
+}
+
+/* ── Progress Bar ── */
+.ats-bar-wrap {
+  margin-bottom: 1.5rem;
+}
+
+.ats-bar-track {
+  height: 6px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 100px;
+  overflow: hidden;
+  margin-bottom: 0.4rem;
+}
+
+.ats-bar-fill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ats-bar-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: var(--muted);
+  padding: 0 1px;
+}
+
+/* ── Content Grid ── */
+.ats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.ats-section {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+}
+
+.ats-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ats-count-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 100px;
+  margin-left: auto;
+  letter-spacing: 0;
+}
+
+/* ── Keyword Tags ── */
+.ats-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ats-tag {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+}
+
+.ats-tag-found {
+  background: rgba(74,222,128,0.1);
+  border: 1px solid rgba(74,222,128,0.2);
+  color: var(--green);
+}
+
+.ats-tag-missing {
+  background: rgba(248,113,113,0.1);
+  border: 1px solid rgba(248,113,113,0.2);
+  color: var(--red);
+}
+
+.ats-empty {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-style: italic;
+  font-weight: 300;
+}
+
+/* ── Section Detection Pills ── */
+.ats-sections-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ats-section-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.25rem 0.65rem;
+  border-radius: 8px;
+  transition: opacity 0.2s;
+}
+
+.ats-section-pill.section-found {
+  background: rgba(74,222,128,0.1);
+  border: 1px solid rgba(74,222,128,0.2);
+  color: var(--green);
+}
+
+.ats-section-pill.section-missing {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.section-pill-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* ── Formatting Warnings ── */
+.ats-warnings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ats-warning-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.5;
+  font-weight: 300;
+  padding: 0.5rem 0.75rem;
+  background: rgba(251,191,36,0.05);
+  border: 1px solid rgba(251,191,36,0.12);
+  border-radius: 8px;
+}
+
+.ats-warning-good {
+  background: rgba(74,222,128,0.05);
+  border-color: rgba(74,222,128,0.12);
+}
+
+.warning-icon {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  margin-top: 0.1rem;
+}
+
+/* ── ATS Tips ── */
+.ats-tips {
+  background: rgba(124,106,247,0.05);
+  border: 1px solid rgba(124,106,247,0.15);
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+}
+
+.ats-tips-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.01em;
+}
+
+.ats-tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.ats-tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.55;
+  font-weight: 300;
+}
+
+.ats-tip-num {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(124,106,247,0.15);
+  border: 1px solid rgba(124,106,247,0.25);
+  color: var(--accent);
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.1rem;
+  font-family: 'Syne', sans-serif;
+}
+
+/* ── Responsive ── */
+@media (max-width: 680px) {
+  .ats-grid { grid-template-columns: 1fr; }
+  .ats-card-header { flex-direction: column; align-items: flex-start; }
+  .ats-score-badge { align-self: stretch; justify-content: center; }
+}
