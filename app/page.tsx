@@ -2,6 +2,8 @@
 import { useState, useRef, useCallback } from "react";
 import jsPDF from "jspdf";
 import "./page.css";
+import FAQSection from "./faq";
+
 
 type AppStatus = "idle" | "parsing" | "analyzing" | "success" | "error";
 
@@ -560,7 +562,7 @@ export default function Home() {
             </div>
           </div>
         )}
-
+        <FAQSection />
         <div className="page-footer">Shaikh Farhan <a href="#">View on GitHub</a></div>
       </div>
     </>
