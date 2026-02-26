@@ -3,6 +3,7 @@ import { useState, useRef, useCallback } from "react";
 import jsPDF from "jspdf";
 import "./page.css";
 import FAQSection from "./faq";
+import ScoreHistory, { saveScan } from "./history";
 
 
 type AppStatus = "idle" | "parsing" | "analyzing" | "success" | "error";
@@ -106,6 +107,13 @@ export default function Home() {
 
       setResult(analyzeData);
       setStatus("success");
+      saveScan({
+  filename: file.name,
+  jobTitle: jd.split("\n")[0]?.slice(0, 80) ?? "Job Role",
+  score: analyzeData.score,
+  ats_score: analyzeData.ats?.ats_score ?? 0,
+  summary: analyzeData.summary,
+});
     } catch {
       setErrorMsg("Network error. Please check your connection.");
       setStatus("error");
@@ -562,6 +570,7 @@ export default function Home() {
             </div>
           </div>
         )}
+        <ScoreHistory />
         <FAQSection />
         <div className="page-footer">Shaikh Farhan <a href="#">View on GitHub</a></div>
       </div>

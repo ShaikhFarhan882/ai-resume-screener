@@ -126,10 +126,19 @@ Be specific and actionable. Reference actual skills and keywords from the job de
       );
     }
 
-    const cleaned = rawText
-      .replace(/```json/gi, "")
-      .replace(/```/g, "")
-      .trim();
+    // Extract JSON — handle markdown code blocks and any surrounding text
+    const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/);
+    let cleaned: string;
+    if (jsonMatch) {
+      cleaned = jsonMatch[1].trim();
+    } else {
+      // Find the outermost { ... } block using first { and last }
+      const start = rawText.indexOf("{");
+      const end = rawText.lastIndexOf("}");
+      cleaned = start !== -1 && end !== -1
+        ? rawText.slice(start, end + 1).trim()
+        : rawText.trim();
+    }
 
     let parsed;
     try {
