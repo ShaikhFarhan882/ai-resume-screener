@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const GEMINI_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+
+// ─── In-memory cache: sha256(resumeText + JD) → parsed result ───
+// Same resume + same JD will always return the identical result.
+// Cache lives for the server process lifetime (clears on redeploy/restart).
+const analysisCache = new Map<string, object>();
+
+function hashInput(resumeText: string, jobDescription: string): string {
+  return crypto
+    .createHash("sha256")
+    .update(resumeText.trim() + "|||" + jobDescription.trim())
+    .digest("hex");
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,6 +33,13 @@ export async function POST(req: NextRequest) {
         { error: "Job description is too short. Please paste the full job description." },
         { status: 400 }
       );
+    }
+
+    // ── Cache check: return instantly if seen before ──────────────
+    const cacheKey = hashInput(resumeText, jobDescription);
+    if (analysisCache.has(cacheKey)) {
+      console.log("Cache hit — returning cached analysis");
+      return NextResponse.json({ ...analysisCache.get(cacheKey), cached: true });
     }
 
     const prompt = `You are an expert technical recruiter and career coach with 10+ years of experience, also specialized in ATS (Applicant Tracking System) optimization.
@@ -95,13 +116,9 @@ Be specific and actionable. Reference actual skills and keywords from the job de
         "x-goog-api-key": process.env.GEMINI_API_KEY!,
       },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }],
-          },
-        ],
+        contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.3,
+          temperature: 0.1,
           maxOutputTokens: 8192,
         },
       }),
@@ -132,12 +149,12 @@ Be specific and actionable. Reference actual skills and keywords from the job de
     if (jsonMatch) {
       cleaned = jsonMatch[1].trim();
     } else {
-      // Find the outermost { ... } block using first { and last }
       const start = rawText.indexOf("{");
       const end = rawText.lastIndexOf("}");
-      cleaned = start !== -1 && end !== -1
-        ? rawText.slice(start, end + 1).trim()
-        : rawText.trim();
+      cleaned =
+        start !== -1 && end !== -1
+          ? rawText.slice(start, end + 1).trim()
+          : rawText.trim();
     }
 
     let parsed;
@@ -164,10 +181,9 @@ Be specific and actionable. Reference actual skills and keywords from the job de
       );
     }
 
-    // Build ATS object with fallbacks
     const ats = parsed.ats ?? {};
 
-    return NextResponse.json({
+    const finalResult = {
       success: true,
       score: Math.min(100, Math.max(0, Math.round(parsed.score))),
       summary: parsed.summary,
@@ -191,7 +207,12 @@ Be specific and actionable. Reference actual skills and keywords from the job de
         },
         ats_tips: (ats.ats_tips ?? []).slice(0, 5),
       },
-    });
+    };
+
+    // ── Store in cache before returning ──────────────────────────
+    analysisCache.set(cacheKey, finalResult);
+
+    return NextResponse.json(finalResult);
 
   } catch (err) {
     console.error("Analyze error:", err);

@@ -257,7 +257,7 @@ export default function Home() {
           <h1>Land the job<br /><span className="h1-line2">you actually want.</span></h1>
           <p className="hero-sub">Upload your resume, paste a job description — get a match score, ATS analysis, skill gaps, and rewrite suggestions in seconds.</p>
           <div className="stats">
-            <div className="stat"><div className="stat-num">84%</div><div className="stat-label">Avg. score lift</div></div>
+            <div className="stat"><div className="stat-num">40%</div><div className="stat-label">Avg. score lift</div></div>
             <div className="stat-divider" />
             <div className="stat"><div className="stat-num">&lt;10s</div><div className="stat-label">Analysis time</div></div>
             <div className="stat-divider" />
