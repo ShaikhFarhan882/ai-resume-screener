@@ -4,7 +4,7 @@ import jsPDF from "jspdf";
 import "./page.css";
 import FAQSection from "./faq";
 import ScoreHistory, { saveScan } from "./history";
-
+import CoverLetterGenerator from "./coverlettergenerator";
 
 type AppStatus = "idle" | "parsing" | "analyzing" | "success" | "error";
 
@@ -39,6 +39,7 @@ export default function Home() {
   const [dragOver, setDragOver] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [jd, setJd] = useState("");
+  const [resumeText, setResumeText] = useState(""); // ← stores parsed PDF text for cover letter
   const [status, setStatus] = useState<AppStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -80,6 +81,7 @@ export default function Home() {
     setStatus("parsing");
     setErrorMsg("");
     setResult(null);
+    setResumeText("");
 
     try {
       const formData = new FormData();
@@ -91,6 +93,9 @@ export default function Home() {
         setStatus("error");
         return;
       }
+
+      // ← save parsed text so CoverLetterGenerator can use it
+      setResumeText(parseData.text);
 
       setStatus("analyzing");
       const analyzeRes = await fetch("/api/analyze", {
@@ -108,12 +113,12 @@ export default function Home() {
       setResult(analyzeData);
       setStatus("success");
       saveScan({
-  filename: file.name,
-  jobTitle: jd.split("\n")[0]?.slice(0, 80) ?? "Job Role",
-  score: analyzeData.score,
-  ats_score: analyzeData.ats?.ats_score ?? 0,
-  summary: analyzeData.summary,
-});
+        filename: file.name,
+        jobTitle: jd.split("\n")[0]?.slice(0, 80) ?? "Job Role",
+        score: analyzeData.score,
+        ats_score: analyzeData.ats?.ats_score ?? 0,
+        summary: analyzeData.summary,
+      });
     } catch {
       setErrorMsg("Network error. Please check your connection.");
       setStatus("error");
@@ -138,6 +143,7 @@ export default function Home() {
   const handleReset = () => {
     setFile(null);
     setJd("");
+    setResumeText("");
     setStatus("idle");
     setResult(null);
     setErrorMsg("");
@@ -359,7 +365,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* ── ATS Score Card ── */}
+            {/* ATS Score Card */}
             {result.ats && (
               <div className="ats-card">
                 <div className="ats-card-header">
@@ -535,10 +541,12 @@ export default function Home() {
                 </div>
               ))}
             </div>
+
+
           </div>
         )}
 
-        {/* Scan Another Resume button */}
+        {/* Scan Another Resume + Download buttons */}
         {status === "success" && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem", flexWrap: "wrap", marginBottom: "3rem" }}>
             <button className="btn-download" onClick={handleDownloadPDF}>
@@ -549,6 +557,18 @@ export default function Home() {
             </button>
           </div>
         )}
+
+
+        {/* ── Cover Letter Generator ── */}
+        {status === "success" && (
+        <CoverLetterGenerator
+         resumeText={resumeText}
+         jobDescription={jd}
+      />
+    )}
+
+       
+
 
         {/* Features — hide when results shown */}
         {status !== "success" && (
@@ -570,6 +590,7 @@ export default function Home() {
             </div>
           </div>
         )}
+
         <ScoreHistory />
         <FAQSection />
         <div className="page-footer">Shaikh Farhan <a href="#">View on GitHub</a></div>
