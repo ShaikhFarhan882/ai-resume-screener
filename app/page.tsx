@@ -5,6 +5,7 @@ import "./page.css";
 import FAQSection from "./faq";
 import ScoreHistory, { saveScan } from "./history";
 import CoverLetterGenerator from "./coverlettergenerator";
+import InterviewPrep from "./interviewprep";
 
 type AppStatus = "idle" | "parsing" | "analyzing" | "success" | "error";
 
@@ -567,8 +568,16 @@ export default function Home() {
       />
     )}
 
-       
+    {status === "success" && (
+    <InterviewPrep
+    resumeText={resumeText}
+    jobDescription={jd}
+    gaps={result?.gaps ?? []}
+    strengths={result?.strengths ?? []}
+  />
+  )}
 
+       
 
         {/* Features — hide when results shown */}
         {status !== "success" && (
